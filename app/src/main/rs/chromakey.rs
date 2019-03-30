@@ -22,8 +22,9 @@ void chromaKey(const uchar4 *allocationIn, uchar4 *v_out, uint32_t x, uint32_t y
     minColorRange = baseColor - colorTolerance;
     maxColorRange = baseColor + colorTolerance;
 
-    minColorRange = minColorRange < 0 ? 0 : minColorRange;
-    maxColorRange = maxColorRange > 360 ? 360 : maxColorRange;
+    // minColorRange can be higher than maxColorRange since HSV is arranged in a radial slice
+    minColorRange = minColorRange < 0 ? (360 + minColorRange) : minColorRange;
+    maxColorRange = maxColorRange > 360 ? (360 - maxColorRange) : maxColorRange;
 
     minValue = min(RED, min(GREEN,BLUE));
     maxValue = max(RED, max(GREEN,BLUE));
@@ -51,7 +52,14 @@ void chromaKey(const uchar4 *allocationIn, uchar4 *v_out, uint32_t x, uint32_t y
             saturation = deltaValue / maxValue;
         }
 
-        if(hue >= 60 && hue <= 140 && saturation >= 0.07 && maxValue > 80) {
+        // TODO: refactor
+        minColorRange = 60;
+        maxColorRange = 140;
+
+        bool inBounds = (minColorRange <= maxColorRange) && (hue >= minColorRange && hue <= maxColorRange);
+        bool outOfBounds = (minColorRange >= maxColorRange) && (hue >= minColorRange || hue <= maxColorRange);
+
+        if((inBounds || outOfBounds) && saturation >= 0.07 && maxValue > 80) {
             v_out->a = 0;
         } else {
             v_out->a = ALPHA;

@@ -10,6 +10,7 @@ void removeColor(const uchar4 *v_in, uchar4 *v_out) {
     int minColorRange;
     int maxColorRange;
     int colorTolerance;
+    double saturation = 0;
 
     int baseColor = 100;
     int tolerance = 30;
@@ -26,8 +27,9 @@ void removeColor(const uchar4 *v_in, uchar4 *v_out) {
     minColorRange = baseColor - colorTolerance;
     maxColorRange = baseColor + colorTolerance;
 
-    minColorRange = minColorRange < 0 ? 0 : minColorRange;
-    maxColorRange = maxColorRange > 360 ? 360 : maxColorRange;
+    // minColorRange can be higher than maxColorRange since HSV is arranged in a radial slice
+    minColorRange = minColorRange < 0 ? (360 + minColorRange) : minColorRange;
+    maxColorRange = maxColorRange > 360 ? (360 - maxColorRange) : maxColorRange;
 
     minValue = min(r, min(g,b));
     maxValue = max(r, max(g,b));
@@ -51,8 +53,14 @@ void removeColor(const uchar4 *v_in, uchar4 *v_out) {
         hue = hue * 60.0;
         hue = hue < 0.0 ? (hue + 360.0) : hue;
 
+        if(maxValue > 0) {
+            saturation = deltaValue / maxValue;
+        }
 
-        if(hue >= minColorRange && hue <= maxColorRange) {
+        bool inBounds = (minColorRange <= maxColorRange) && (hue >= minColorRange && hue <= maxColorRange);
+        bool outOfBounds = (minColorRange >= maxColorRange) && (hue >= minColorRange || hue <= maxColorRange);
+
+        if((inBounds || outOfBounds) && saturation > 0.07) {
             v_out->a = 0;
         } else {
             v_out->a = v_in->a;
