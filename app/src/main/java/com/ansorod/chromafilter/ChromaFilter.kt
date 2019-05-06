@@ -2,18 +2,22 @@ package com.ansorod.chromafilter
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.renderscript.*
+import android.renderscript.Allocation
+import android.renderscript.Element
+import android.renderscript.RenderScript
+import android.renderscript.Type
 import android.view.Surface
 import android.view.TextureView
 
 class ChromaFilter(context: Context) {
 
-    private var textureView: TextureView? = null
     private val render: RenderScript = RenderScript.create(context)
-    private var baseColor: Int
-    private var tolerance: Int
-    private var saturation: Double
-    private var brightness: Int
+
+    public var textureView: TextureView? = null
+    public var baseColor: Int
+    public var tolerance: Int
+    public var saturation: Double
+    public var brightness: Int
 
     init {
         baseColor = DEFAULT_BASE_COLOR
@@ -22,7 +26,6 @@ class ChromaFilter(context: Context) {
         brightness = DEFAULT_BRIGHTNESS
     }
 
-
     /**
      * Applies the chroma filter to the given bitmap
      *
@@ -30,21 +33,24 @@ class ChromaFilter(context: Context) {
      * @return {Bitmap} a nullable Bitmap. Chosen color is replaced by transparent pixels
      */
     fun applyToBitmap(bitmap: Bitmap): Bitmap? {
-        bitmap?.let {
-            val result = Bitmap.createBitmap(it.width, it.height, Bitmap.Config.ARGB_8888)
-            val script = ScriptC_color_extractor(render)
+        val result = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        val script = ScriptC_color_extractor(render)
 
-            val allocationInput = Allocation.createFromBitmap(render, bitmap, Allocation.MipmapControl.MIPMAP_NONE, Allocation.USAGE_SCRIPT)
-            val allocationOutput = Allocation.createTyped(render, allocationInput.type)
+        val allocationInput = Allocation.createFromBitmap(render, bitmap, Allocation.MipmapControl.MIPMAP_NONE, Allocation.USAGE_SCRIPT)
+        val allocationOutput = Allocation.createTyped(render, allocationInput.type)
 
-            script.forEach_removeColor(allocationInput, allocationOutput)
-            allocationOutput.copyTo(result)
+        script._baseColor = baseColor
+        script._tolerance = tolerance
+        script._saturation = saturation
+        script._brightness = brightness
 
-            allocationInput.destroy()
-            allocationOutput.destroy()
+        script.forEach_removeColor(allocationInput, allocationOutput)
+        allocationOutput.copyTo(result)
 
-            return result
-        }
+        allocationInput.destroy()
+        allocationOutput.destroy()
+
+        return result
     }
 
     /**
@@ -65,6 +71,12 @@ class ChromaFilter(context: Context) {
             inputAllocation.copyFrom(yuvData)
 
             outputAllocation.surface =  Surface(it.surfaceTexture)
+
+            converter._baseColor = baseColor
+            converter._tolerance = tolerance
+            converter._saturation = saturation
+            converter._brightness = brightness
+
             converter.forEach_chromaKey(inputAllocation, outputAllocation)
             outputAllocation.ioSend()
 

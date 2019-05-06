@@ -1,6 +1,11 @@
 #pragma version(1)
 #pragma rs java_package_name(com.ansorod.chromafilter)
 
+double saturation;
+int baseColor = 100;
+int tolerance = 30;
+int brightness = 80;
+
 void removeColor(const uchar4 *v_in, uchar4 *v_out) {
 
     double minValue;
@@ -10,10 +15,8 @@ void removeColor(const uchar4 *v_in, uchar4 *v_out) {
     int minColorRange;
     int maxColorRange;
     int colorTolerance;
-    double saturation = 0;
 
-    int baseColor = 100;
-    int tolerance = 30;
+    double saturationValue = 0;
 
     int r, g, b;
     r = v_in->r;
@@ -54,13 +57,13 @@ void removeColor(const uchar4 *v_in, uchar4 *v_out) {
         hue = hue < 0.0 ? (hue + 360.0) : hue;
 
         if(maxValue > 0) {
-            saturation = deltaValue / maxValue;
+            saturationValue = deltaValue / maxValue;
         }
 
         bool inBounds = (minColorRange <= maxColorRange) && (hue >= minColorRange && hue <= maxColorRange);
         bool outOfBounds = (minColorRange >= maxColorRange) && (hue >= minColorRange || hue <= maxColorRange);
 
-        if((inBounds || outOfBounds) && saturation > 0.07) {
+        if((inBounds || outOfBounds) && saturationValue > saturation) {
             v_out->a = 0;
         } else {
             v_out->a = v_in->a;

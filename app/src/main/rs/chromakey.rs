@@ -1,6 +1,11 @@
 #pragma version(1)
 #pragma rs java_package_name(com.ansorod.chromafilter)
 
+int baseColor;
+int tolerance;
+double saturation;
+int brightness;
+
 void chromaKey(const uchar4 *allocationIn, uchar4 *v_out, uint32_t x, uint32_t y) {
 
     int ALPHA = 255;
@@ -8,12 +13,9 @@ void chromaKey(const uchar4 *allocationIn, uchar4 *v_out, uint32_t x, uint32_t y
     int GREEN = allocationIn->g;
     int BLUE = allocationIn->b;
 
-    double minValue, maxValue, deltaValue, saturation = 0;
+    double minValue, maxValue, deltaValue, saturationValue = 0;
     float hue;
     uint32_t minColorRange, maxColorRange, colorTolerance;
-
-    uint32_t baseColor = 100;
-    uint32_t tolerance = 50;
 
     // Based on the given baseColor and tolerance
     // we set the minColorRange and the maxColorRange.
@@ -49,17 +51,13 @@ void chromaKey(const uchar4 *allocationIn, uchar4 *v_out, uint32_t x, uint32_t y
         hue = hue < 0.0 ? (hue + 360.0) : hue;
 
         if(maxValue > 0) {
-            saturation = deltaValue / maxValue;
+            saturationValue = deltaValue / maxValue;
         }
-
-        // TODO: refactor
-        minColorRange = 60;
-        maxColorRange = 140;
 
         bool inBounds = (minColorRange <= maxColorRange) && (hue >= minColorRange && hue <= maxColorRange);
         bool outOfBounds = (minColorRange >= maxColorRange) && (hue >= minColorRange || hue <= maxColorRange);
 
-        if((inBounds || outOfBounds) && saturation >= 0.07 && maxValue > 80) {
+        if((inBounds || outOfBounds) && saturationValue >= saturation && maxValue > brightness) {
             v_out->a = 0;
         } else {
             v_out->a = ALPHA;
